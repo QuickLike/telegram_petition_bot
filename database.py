@@ -23,6 +23,7 @@ def create_db():
                                                 petition_text TEXT,
                                                 message_id INTEGER,
                                                 created_at TEXT,
+                                                is_sent BOOLEAN DEFAULT 0,
                                                 FOREIGN KEY (author_id) REFERENCES users(user_id)
                                                 );"""
                   )
@@ -76,7 +77,6 @@ def add_user(message: Message):
         conn.commit()
 
 
-
 def add_petition(message: Message):
     create_db()
     user_id = message.from_user.id
@@ -100,6 +100,17 @@ def add_petition(message: Message):
         conn.commit()
 
 
+def send_petition(user_id: int, message_id: int):
+    create_db()
+    with sqlite3.connect('db.db') as conn:
+        c = conn.cursor()
+        is_sent = c.execute("SELECT is_sent FROM petitions WHERE author_id = ? AND message_id = ?", (user_id, message_id)).fetchall()[-1][-1]
+        conn.commit()
+        if not is_sent:
+            c.execute("UPDATE petitions SET is_sent = 1 WHERE author_id = ? AND message_id = ?", (user_id, message_id))
+    return is_sent
+
+
 def get_data(user_id: int):
     create_db()
     with sqlite3.connect('db.db') as conn:
@@ -110,3 +121,12 @@ def get_data(user_id: int):
     logging.debug(user_data)
     logging.debug(user_petitions)
     return user_data, user_petitions
+
+
+def get_petition(user_id: int, message_id: int):
+    create_db()
+    with sqlite3.connect('db.db') as conn:
+        c = conn.cursor()
+        petition = c.execute("SELECT petition_text FROM petitions WHERE author_id = ? AND message_id = ?", (user_id, message_id)).fetchall()[0]
+        conn.commit()
+    return petition[0]
